@@ -50,7 +50,7 @@ main() {
     
     # build chart name for frontend repos
     chart_name="rv-md1-$pr_nr-$repo"
-    if [["$REPO_TYPE" == "FRONTEND" ]]; then 
+    if [[ "$REPO_TYPE" == "FRONTEND" ]]; then 
       chart_name="pr-$pr_nr-$repo"
     fi
     
