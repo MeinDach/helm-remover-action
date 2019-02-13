@@ -1,0 +1,35 @@
+#!/bin/bash
+
+set -eo pipefail
+
+if [[ -z "$GCLOUD_ZONE" ]]; then
+  echo "Set the GCLOUD_ZONE env variable."
+  exit 1
+fi
+
+if [[ -z "$GCLOUD_CLUSTER" ]]; then
+  echo "Set the GCLOUD_CLUSTER env variable."
+  exit 1
+fi
+
+if [[ -z "$GCLOUD_PROJECT" ]]; then
+  echo "Set the CLOUD_PROJECT env variable."
+  exit 1
+fi
+
+main() {
+    echo "Start Main"
+    echo "conntect to dev cluster"
+  	action=$(jq --raw-output .action "$GITHUB_EVENT_PATH")
+    pr_nr=$(jq --raw-output .pull_request.number "$GITHUB_EVENT_PATH")
+    repo_name=$(jq --raw-output .repository.name "$GITHUB_EVENT_PATH")
+    chart_name="pr-$pr_nr-$repo_name"
+	  echo "DEBUG -> action: $action merged: $merged pr_nr: $pr_nr repo_name: $repo_name chart_name: $chart_name"
+    if [[ "$action" == "closed" ]]; then 
+      echo "Bingo - PR is closed. Let's get rid of the helm"
+      gcloud container clusters get-credentials $GCLOUD_CLUSTER --zone $GCLOUD_ZONE --project $GCLOUD_PROJECT
+      helm delete $chart_name --purge
+    fi
+}
+
+main "$@"
