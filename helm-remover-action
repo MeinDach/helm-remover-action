@@ -49,7 +49,7 @@ main() {
     merged=$(jq --raw-output .pull_request.merged "$GITHUB_EVENT_PATH")
     
     # build chart name for frontend repos
-    chart_name=$(( $REPO_TYPE == "FRONTEND" ? "pr-$pr_nr-$repo" : "rv-md1-$pr_nr-$repo" ))
+    chart_name=$("$REPO_TYPE" == "FRONTEND" ? "pr-$pr_nr-$repo" : "rv-md1-$pr_nr-$repo")
     
 	  echo "DEBUG -> action: $action merged: $merged chart_name: $chart_name"
     if [[ "$action" == "closed" ]]; then 
