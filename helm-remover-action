@@ -17,18 +17,50 @@ if [[ -z "$GCLOUD_PROJECT" ]]; then
   exit 1
 fi
 
+if [[ -z "$GITHUB_TOKEN" ]]; then
+	echo "Set the GITHUB_TOKEN env variable."
+	exit 1
+fi
+
+if [[ -z "$GITHUB_REPOSITORY" ]]; then
+	echo "Set the GITHUB_REPOSITORY env variable."
+	exit 1
+fi
+
+URI=https://api.github.com
+API_VERSION=v3
+API_HEADER="Accept: application/vnd.github.${API_VERSION}+json"
+AUTH_HEADER="Authorization: token ${GITHUB_TOKEN}"
+
 main() {
     echo "Start Main"
-    echo "conntect to dev cluster"
+    # Get all necessary vars from GITHUB_EVENT_PATH json
+    ref=$(jq --raw-output .pull_request.head.ref "$GITHUB_EVENT_PATH")
   	action=$(jq --raw-output .action "$GITHUB_EVENT_PATH")
     pr_nr=$(jq --raw-output .pull_request.number "$GITHUB_EVENT_PATH")
-    repo_name=$(jq --raw-output .repository.name "$GITHUB_EVENT_PATH")
-    chart_name="pr-$pr_nr-$repo_name"
-	  echo "DEBUG -> action: $action merged: $merged pr_nr: $pr_nr repo_name: $repo_name chart_name: $chart_name"
+    repo=$(jq --raw-output .repository.name "$GITHUB_EVENT_PATH")
+    ref=$(jq --raw-output .pull_request.head.ref "$GITHUB_EVENT_PATH")
+		owner=$(jq --raw-output .pull_request.head.repo.owner.login "$GITHUB_EVENT_PATH")
+    merged=$(jq --raw-output .pull_request.merged "$GITHUB_EVENT_PATH")
+    # build chart name for frontend repos
+    chart_name="pr-$pr_nr-$repo"
+    
+	  echo "DEBUG -> action: $action merged: $merged chart_name: $chart_name"
     if [[ "$action" == "closed" ]]; then 
-      echo "Bingo - PR is closed. Let's get rid of the helm"
+      echo "Remove helm chart: $chart_name"
+      # Login Gcloud
       gcloud container clusters get-credentials $GCLOUD_CLUSTER --zone $GCLOUD_ZONE --project $GCLOUD_PROJECT
+      # Delete helm chart which then also deletes all pods services etc
       helm delete $chart_name --purge
+      
+      # Delete Branch
+      if [[ "$merged" == "true" && "$ref" != "master" ]]; then 
+        echo "Deleting branch ref $ref for owner ${owner}/${repo}..."
+        curl -XDELETE -sSL \
+        -H "${AUTH_HEADER}" \
+        -H "${API_HEADER}" \
+        "${URI}/repos/${owner}/${repo}/git/refs/heads/${ref}"
+      fi
     fi
 }
 
