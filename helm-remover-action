@@ -40,35 +40,34 @@ AUTH_HEADER="Authorization: token ${GITHUB_TOKEN}"
 main() {
     echo "Start Main"
     # Get all necessary vars from GITHUB_EVENT_PATH json
-    ref=$(jq --raw-output .pull_request.head.ref "$GITHUB_EVENT_PATH")
-  	action=$(jq --raw-output .action "$GITHUB_EVENT_PATH")
-    pr_nr=$(jq --raw-output .pull_request.number "$GITHUB_EVENT_PATH")
-    repo=$(jq --raw-output .repository.name "$GITHUB_EVENT_PATH")
-    ref=$(jq --raw-output .pull_request.head.ref "$GITHUB_EVENT_PATH")
-		owner=$(jq --raw-output .pull_request.head.repo.owner.login "$GITHUB_EVENT_PATH")
-    merged=$(jq --raw-output .pull_request.merged "$GITHUB_EVENT_PATH")
+    REF=$(jq --raw-output .pull_request.head.ref "$GITHUB_EVENT_PATH")
+    ACTION=$(jq --raw-output .action "$GITHUB_EVENT_PATH")
+    PR_NR=$(jq --raw-output .pull_request.number "$GITHUB_EVENT_PATH")
+    REPO=$(jq --raw-output .repository.name "$GITHUB_EVENT_PATH")
+    OWNER=$(jq --raw-output .pull_request.head.repo.owner.login "$GITHUB_EVENT_PATH")
+    MERGE=$(jq --raw-output .pull_request.merged "$GITHUB_EVENT_PATH")
     
     # build chart name for frontend repos
-    chart_name="rv-md1-$pr_nr-$repo"
+    CHART_NAME="rv-md1-$PR_NR-$REPO"
     if [[ "$REPO_TYPE" == "FRONTEND" ]]; then 
-      chart_name="pr-$pr_nr-$repo"
+      CHART_NAME="pr-$PR_NR-$REPO"
     fi
     
-	  echo "DEBUG -> action: $action merged: $merged chart_name: $chart_name"
-    if [[ "$action" == "closed" ]]; then 
-      echo "Remove helm chart: $chart_name"
+	  echo "DEBUG -> action: $ACTION merged: $MAERGED chart_name: $CHART_NAME"
+    if [[ "$ACTION" == "closed" ]]; then 
+      echo "Remove helm chart: $CHART_NAME"
       # Login Gcloud
       gcloud container clusters get-credentials $GCLOUD_CLUSTER --zone $GCLOUD_ZONE --project $GCLOUD_PROJECT
       # Delete helm chart which then also deletes all pods services etc
-      helm delete $chart_name --purge
+      helm delete $CHART_NAME --purge
       
       # Delete Branch
-      if [[ "$merged" == "true" && "$ref" != "master" ]]; then 
-        echo "Deleting branch ref $ref for owner ${owner}/${repo}..."
+      if [[ "$MERGED" == "true" && "$REF" != "master" ]]; then 
+        echo "Deleting branch ref $REF for owner ${OWNER}/${REPO}..."
         curl -XDELETE -sSL \
         -H "${AUTH_HEADER}" \
         -H "${API_HEADER}" \
-        "${URI}/repos/${owner}/${repo}/git/refs/heads/${ref}"
+        "${URI}/repos/${OWNER}/${REPO}/git/refs/heads/${REF}"
       fi
     fi
 }

@@ -1,4 +1,5 @@
 # helm-remover-action
+## This Repo is Public so do not put in secrets
 
 This is a github that will remove helm charts after PRs get closed.
 If the PR gets merged the branch will get deleted as well.
